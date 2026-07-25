@@ -33,8 +33,11 @@ class _PostRideModalState extends State<PostRideModal> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = isDark ? AppColors.darkBackgroundElement : AppColors.lightBackgroundElement;
-    final textColor = isDark ? AppColors.darkText : AppColors.lightText;
+    final textColor = isDark ? const Color(0xFFF8FAFC) : const Color(0xFF0F172A);
+    final textSecondary = isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569);
     final primary = isDark ? AppColors.darkPrimary : AppColors.lightPrimary;
+    final border = isDark ? AppColors.darkBorder : AppColors.lightBorder;
+    final inputBg = isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC);
 
     return Container(
       padding: EdgeInsets.only(
@@ -45,13 +48,28 @@ class _PostRideModalState extends State<PostRideModal> {
       ),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Modal Handle
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+
+            // Header Row
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -59,7 +77,7 @@ class _PostRideModalState extends State<PostRideModal> {
                   'Offer a Ride',
                   style: TextStyle(
                     color: textColor,
-                    fontSize: 20,
+                    fontSize: 22,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -69,34 +87,76 @@ class _PostRideModalState extends State<PostRideModal> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
+
+            // Pickup Location Input
             TextField(
               controller: _pickupController,
+              style: TextStyle(color: textColor, fontSize: 15, fontWeight: FontWeight.bold),
               decoration: InputDecoration(
+                filled: true,
+                fillColor: inputBg,
                 labelText: 'Pickup Location *',
+                labelStyle: TextStyle(color: textSecondary, fontWeight: FontWeight.w500),
                 prefixIcon: Icon(Icons.my_location, color: primary),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: primary, width: 2),
+                ),
               ),
             ),
             const SizedBox(height: 12),
+
+            // Destination Location Input
             TextField(
               controller: _destinationController,
+              style: TextStyle(color: textColor, fontSize: 15, fontWeight: FontWeight.bold),
               decoration: InputDecoration(
+                filled: true,
+                fillColor: inputBg,
                 labelText: 'Destination Location *',
+                labelStyle: TextStyle(color: textSecondary, fontWeight: FontWeight.w500),
                 prefixIcon: Icon(Icons.location_on, color: primary),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: primary, width: 2),
+                ),
               ),
             ),
             const SizedBox(height: 12),
+
+            // Departure Time & Fare Share Row
             Row(
               children: [
                 Expanded(
                   child: TextField(
                     controller: _timeController,
+                    style: TextStyle(color: textColor, fontSize: 13, fontWeight: FontWeight.bold),
                     decoration: InputDecoration(
+                      filled: true,
+                      fillColor: inputBg,
                       labelText: 'Departure Time',
-                      prefixIcon: Icon(Icons.access_time, color: primary),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      labelStyle: TextStyle(color: textSecondary, fontWeight: FontWeight.w500, fontSize: 12),
+                      prefixIcon: Icon(Icons.access_time, color: primary, size: 20),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: border),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: primary, width: 2),
+                      ),
                     ),
                   ),
                 ),
@@ -104,72 +164,137 @@ class _PostRideModalState extends State<PostRideModal> {
                 Expanded(
                   child: TextField(
                     controller: _fareController,
+                    style: TextStyle(color: textColor, fontSize: 13, fontWeight: FontWeight.bold),
                     decoration: InputDecoration(
+                      filled: true,
+                      fillColor: inputBg,
                       labelText: 'Fare Share',
-                      prefixIcon: Icon(Icons.payments, color: primary),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      labelStyle: TextStyle(color: textSecondary, fontWeight: FontWeight.w500, fontSize: 12),
+                      prefixIcon: Icon(Icons.payments, color: primary, size: 20),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: border),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: primary, width: 2),
+                      ),
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            Text('Seats Available', style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 6),
-            Row(
-              children: [1, 2, 3, 4, 5, 6].map((s) {
-                final isSel = _seatsTotal == s;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: ChoiceChip(
-                    label: Text('$s Seats'),
-                    selected: isSel,
-                    selectedColor: primary,
-                    onSelected: (sel) {
-                      if (sel) setState(() => _seatsTotal = s);
-                    },
-                  ),
-                );
-              }).toList(),
+            const SizedBox(height: 18),
+
+            // Seats Available Selector (Scrollable to prevent yellow/black lines!)
+            Text(
+              'Seats Available',
+              style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 14),
             ),
-            const SizedBox(height: 16),
-            Text('Gender Preference', style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 6),
-            Row(
-              children: ['Both', 'Boys only', 'Girls only'].map((g) {
-                final isSel = _genderPreference == g;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: ChoiceChip(
-                    label: Text(g),
-                    selected: isSel,
-                    selectedColor: primary,
-                    onSelected: (sel) {
-                      if (sel) setState(() => _genderPreference = g);
-                    },
-                  ),
-                );
-              }).toList(),
+            const SizedBox(height: 8),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              child: Row(
+                children: [1, 2, 3, 4, 5, 6].map((s) {
+                  final isSel = _seatsTotal == s;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ChoiceChip(
+                      label: Text(
+                        '$s Seats',
+                        style: TextStyle(
+                          color: isSel ? Colors.white : textColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                      selected: isSel,
+                      selectedColor: primary,
+                      backgroundColor: inputBg,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      onSelected: (sel) {
+                        if (sel) setState(() => _seatsTotal = s);
+                      },
+                    ),
+                  );
+                }).toList(),
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 18),
+
+            // Gender Preference Selector (Scrollable to prevent yellow/black lines!)
+            Text(
+              'Gender Preference',
+              style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 14),
+            ),
+            const SizedBox(height: 8),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              child: Row(
+                children: ['Both', 'Boys only', 'Girls only'].map((g) {
+                  final isSel = _genderPreference == g;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ChoiceChip(
+                      label: Text(
+                        g,
+                        style: TextStyle(
+                          color: isSel ? Colors.white : textColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                      selected: isSel,
+                      selectedColor: primary,
+                      backgroundColor: inputBg,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      onSelected: (sel) {
+                        if (sel) setState(() => _genderPreference = g);
+                      },
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+            const SizedBox(height: 18),
+
+            // Ride Notes Input
             TextField(
               controller: _notesController,
               maxLines: 2,
+              style: TextStyle(color: textColor, fontSize: 14, fontWeight: FontWeight.w600),
               decoration: InputDecoration(
+                filled: true,
+                fillColor: inputBg,
                 labelText: 'Ride Notes (e.g. AC car, luggage space)',
+                labelStyle: TextStyle(color: textSecondary, fontWeight: FontWeight.w500),
                 prefixIcon: Icon(Icons.notes, color: primary),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: primary, width: 2),
+                ),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
+
+            // Submit Button
             SizedBox(
               width: double.infinity,
-              height: 48,
+              height: 50,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: primary,
-                  foregroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  foregroundColor: Colors.white,
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 onPressed: () {
                   if (_pickupController.text.trim().isEmpty || _destinationController.text.trim().isEmpty) {
@@ -190,7 +315,10 @@ class _PostRideModalState extends State<PostRideModal> {
                       );
                   Navigator.pop(context);
                 },
-                child: const Text('Post Ride Offer', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                child: const Text(
+                  'Post Ride Offer',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                ),
               ),
             ),
           ],

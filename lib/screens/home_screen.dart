@@ -34,10 +34,18 @@ class HomeScreen extends StatelessWidget {
       if (filters.seats != null && ride.seatsLeft < filters.seats!) {
         return false;
       }
+      if (filters.genderPreference != 'all' && filters.genderPreference != 'Both') {
+        if (ride.genderPreference != 'Both' && ride.genderPreference != filters.genderPreference) {
+          return false;
+        }
+      }
       return true;
     }).toList();
 
-    final hasActiveFilters = filters.pickup.isNotEmpty || filters.destination.isNotEmpty || filters.seats != null;
+    final hasActiveFilters = filters.pickup.isNotEmpty ||
+        filters.destination.isNotEmpty ||
+        filters.seats != null ||
+        (filters.genderPreference != 'all' && filters.genderPreference != 'Both');
 
     return Scaffold(
       backgroundColor: bg,

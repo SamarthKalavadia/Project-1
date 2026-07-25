@@ -1,8 +1,11 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
 import '../providers/rides_provider.dart';
 import '../models/user.dart';
 import '../theme/app_theme.dart';
+import '../widgets/user_avatar.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -18,6 +21,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   late TextEditingController _phoneController;
   late String _selectedGender;
   late String _selectedPhoto;
+
+  final List<String> _avatarPresets = [
+    'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
+    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
+    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+    'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150',
+  ];
 
   @override
   void initState() {
@@ -38,6 +48,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.dispose();
   }
 
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(
+        source: source,
+        maxWidth: 500,
+        maxHeight: 500,
+        imageQuality: 80,
+      );
+
+      if (pickedFile != null) {
+        final bytes = await pickedFile.readAsBytes();
+        final base64Image = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+        setState(() {
+          _selectedPhoto = base64Image;
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to pick image: $e')),
+      );
+    }
+  }
+
   void _saveProfile() {
     final provider = context.read<RidesProvider>();
     final updatedUser = User(
@@ -50,7 +84,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     provider.updateCurrentUser(updatedUser);
     setState(() => _isEditing = false);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Profile updated successfully!')),
+      const SnackBar(content: Text('Profile updated & saved to Database!')),
     );
   }
 
@@ -74,8 +108,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
     }
 
-    final offeredRides = provider.rides.where((r) => r.poster.email == user.email).toList();
-    final joinedRides = provider.rides.where((r) => r.acceptor?.email == user.email).toList();
+    final offeredRides = provider.rides.where((r) => r.poster.email == user.email || r.poster.phone == user.phone).toList();
+    final joinedRides = provider.rides.where((r) => r.acceptor?.email == user.email || r.acceptor?.phone == user.phone).toList();
 
     return Scaffold(
       backgroundColor: bg,
@@ -116,6 +150,72 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       children: [
                         Text('Edit Profile Details', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 16)),
                         const SizedBox(height: 14),
+
+                        // Profile Image Selector Header
+                        Center(
+                          child: Column(
+                            children: [
+                              UserAvatar(
+                                photoUrl: _selectedPhoto,
+                                name: _nameController.text,
+                                radius: 45,
+                              ),
+                              const SizedBox(height: 10),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  OutlinedButton.icon(
+                                    style: OutlinedButton.styleFrom(
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    ),
+                                    onPressed: () => _pickImage(ImageSource.gallery),
+                                    icon: const Icon(Icons.photo_library, size: 16),
+                                    label: const Text('Gallery', style: TextStyle(fontSize: 12)),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  OutlinedButton.icon(
+                                    style: OutlinedButton.styleFrom(
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    ),
+                                    onPressed: () => _pickImage(ImageSource.camera),
+                                    icon: const Icon(Icons.camera_alt, size: 16),
+                                    label: const Text('Camera', style: TextStyle(fontSize: 12)),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text('Or select an avatar preset:', style: TextStyle(color: textSecondary, fontSize: 11)),
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: _avatarPresets.map((presetUrl) {
+                                  final isSelected = _selectedPhoto == presetUrl;
+                                  return GestureDetector(
+                                    onTap: () => setState(() => _selectedPhoto = presetUrl),
+                                    child: Container(
+                                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                                      padding: const EdgeInsets.all(2),
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: isSelected ? primary : Colors.transparent,
+                                          width: 2,
+                                        ),
+                                      ),
+                                      child: UserAvatar(
+                                        photoUrl: presetUrl,
+                                        name: 'Avatar',
+                                        radius: 18,
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
                         TextField(
                           controller: _nameController,
                           decoration: InputDecoration(
@@ -181,9 +281,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     )
                   : Column(
                       children: [
-                        CircleAvatar(
-                          radius: 40,
-                          backgroundImage: NetworkImage(user.photo),
+                        UserAvatar(
+                          photoUrl: user.photo,
+                          name: user.name,
+                          radius: 42,
                         ),
                         const SizedBox(height: 12),
                         Text(user.name, style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 22)),
@@ -209,9 +310,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               side: BorderSide(color: border),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                             ),
-                            onPressed: () => setState(() => _isEditing = true),
+                            onPressed: () {
+                              setState(() {
+                                _isEditing = true;
+                                _selectedPhoto = user.photo;
+                              });
+                            },
                             icon: const Icon(Icons.edit, size: 16),
-                            label: const Text('Edit Profile'),
+                            label: const Text('Change Profile & Image'),
                           ),
                         ),
                       ],
