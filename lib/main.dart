@@ -6,6 +6,7 @@ import 'theme/app_theme.dart';
 import 'providers/rides_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/my_rides_screen.dart';
 import 'screens/profile_screen.dart';
 
 const firebaseOptions = FirebaseOptions(
@@ -62,6 +63,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   final List<Widget> _screens = const [
     HomeScreen(),
+    MyRidesScreen(),
     ProfileScreen(),
   ];
 
@@ -89,10 +91,15 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) => setState(() => _currentIndex = index),
+        selectedItemColor: const Color(0xFF0D9488),
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.directions_car),
-            label: 'Rides',
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.explore),
+            label: 'My Rides',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person),
@@ -103,3 +110,4 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     );
   }
 }
+

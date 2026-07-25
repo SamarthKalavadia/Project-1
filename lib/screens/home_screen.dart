@@ -13,15 +13,17 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = isDark ? AppColors.darkBackground : AppColors.lightBackground;
+    final cardBg = isDark ? AppColors.darkBackgroundElement : AppColors.lightBackgroundElement;
     final textColor = isDark ? AppColors.darkText : AppColors.lightText;
     final textSecondary = isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
     final primary = isDark ? AppColors.darkPrimary : AppColors.lightPrimary;
+    final border = isDark ? AppColors.darkBorder : AppColors.lightBorder;
 
     final provider = context.watch<RidesProvider>();
     final rides = provider.rides;
     final filters = provider.filters;
 
-    // Apply active filters
+    // Filter rides based on search criteria
     final filteredRides = rides.where((ride) {
       if (filters.pickup.isNotEmpty && !ride.pickup.toLowerCase().contains(filters.pickup.toLowerCase())) {
         return false;
@@ -35,6 +37,8 @@ class HomeScreen extends StatelessWidget {
       return true;
     }).toList();
 
+    final hasActiveFilters = filters.pickup.isNotEmpty || filters.destination.isNotEmpty || filters.seats != null;
+
     return Scaffold(
       backgroundColor: bg,
       appBar: AppBar(
@@ -42,7 +46,19 @@ class HomeScreen extends StatelessWidget {
           children: [
             Icon(Icons.directions_car, color: primary, size: 28),
             const SizedBox(width: 8),
-            Text('AutoShare', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 20)),
+            Text('AutoShare', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 22)),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: primary.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                'BETA',
+                style: TextStyle(color: primary, fontWeight: FontWeight.bold, fontSize: 10),
+              ),
+            ),
           ],
         ),
         actions: [
@@ -58,62 +74,113 @@ class HomeScreen extends StatelessWidget {
             },
           ),
         ],
+        elevation: 0,
       ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Filter Bar / Active Filter Chips
-            if (filters.pickup.isNotEmpty || filters.destination.isNotEmpty || filters.seats != null)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                color: primary.withOpacity(0.1),
-                child: Row(
-                  children: [
-                    const Icon(Icons.filter_list, size: 16, color: Colors.teal),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        'Active Filters Applied',
-                        style: TextStyle(color: primary, fontWeight: FontWeight.bold, fontSize: 12),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await Future.delayed(const Duration(milliseconds: 600));
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Active Filters Bar
+              if (hasActiveFilters)
+                Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: primary.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.filter_list, size: 18, color: primary),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Active Filters Applied',
+                          style: TextStyle(color: primary, fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
                       ),
-                    ),
-                    TextButton(
-                      onPressed: () => provider.clearFilters(),
-                      child: const Text('Clear All', style: TextStyle(fontSize: 12)),
-                    ),
-                  ],
+                      GestureDetector(
+                        onTap: () => provider.clearFilters(),
+                        child: Text(
+                          'Clear All',
+                          style: TextStyle(color: primary, fontWeight: FontWeight.bold, fontSize: 12),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
 
-            // Main List
-            Expanded(
-              child: filteredRides.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.search_off, size: 64, color: textSecondary),
-                          const SizedBox(height: 12),
-                          Text('No rides match your search criteria', style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 6),
-                          Text('Try adjusting your filters or post a new ride offer', style: TextStyle(color: textSecondary, fontSize: 13)),
-                        ],
+              // Welcome Block
+              Text('Find a Cab/Auto Pool', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 22)),
+              const SizedBox(height: 4),
+              Text(
+                'Join co-passengers heading your way and split costs',
+                style: TextStyle(color: textSecondary, fontSize: 14),
+              ),
+              const SizedBox(height: 16),
+
+              // Feed list
+              if (filteredRides.isEmpty)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+                  decoration: BoxDecoration(
+                    color: cardBg,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: border),
+                  ),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 70,
+                        height: 70,
+                        decoration: BoxDecoration(
+                          color: primary.withOpacity(0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(Icons.search_off, size: 36, color: primary),
                       ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: filteredRides.length,
-                      itemBuilder: (context, index) {
-                        return RideCard(ride: filteredRides[index]);
-                      },
-                    ),
-            ),
-          ],
+                      const SizedBox(height: 14),
+                      Text(
+                        'No matching ride requests',
+                        style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Try clearing some filters, searching for a broader location, or post your own ride request to get joined!',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: textSecondary, fontSize: 13, height: 1.4),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primary,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onPressed: () => provider.clearFilters(),
+                        child: const Text('Clear All Filters', style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                ...filteredRides.map((ride) => RideCard(ride: ride)),
+
+              const SizedBox(height: 80),
+            ],
+          ),
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: primary,
-        foregroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
+        foregroundColor: Colors.white,
         onPressed: () {
           showModalBottomSheet(
             context: context,
@@ -123,7 +190,7 @@ class HomeScreen extends StatelessWidget {
           );
         },
         icon: const Icon(Icons.add),
-        label: const Text('Offer Ride', style: TextStyle(fontWeight: FontWeight.bold)),
+        label: const Text('Post Ride', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
       ),
     );
   }
