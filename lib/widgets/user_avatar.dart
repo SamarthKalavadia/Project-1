@@ -17,7 +17,6 @@ class UserAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     Widget fallbackAvatar() {
       return Container(
@@ -47,7 +46,7 @@ class UserAvatar extends StatelessWidget {
       );
     }
 
-    if (photoUrl.isEmpty) {
+    if (photoUrl.isEmpty || photoUrl.contains('unsplash')) {
       return fallbackAvatar();
     }
 

@@ -19,15 +19,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   late TextEditingController _nameController;
   late TextEditingController _emailController;
   late TextEditingController _phoneController;
-  late String _selectedGender;
   late String _selectedPhoto;
-
-  final List<String> _avatarPresets = [
-    'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
-    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
-    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-    'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150',
-  ];
 
   @override
   void initState() {
@@ -36,8 +28,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _nameController = TextEditingController(text: user?.name ?? '');
     _emailController = TextEditingController(text: user?.email ?? '');
     _phoneController = TextEditingController(text: user?.phone ?? '');
-    _selectedGender = user?.gender ?? 'Male';
-    _selectedPhoto = user?.photo ?? 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150';
+    _selectedPhoto = user?.photo ?? '';
   }
 
   @override
@@ -74,17 +65,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _saveProfile() {
     final provider = context.read<RidesProvider>();
+    final currentUser = provider.currentUser;
+    if (currentUser == null) return;
+
     final updatedUser = User(
-      name: _nameController.text.trim(),
-      email: _emailController.text.trim(),
-      phone: _phoneController.text.trim(),
-      gender: _selectedGender,
+      name: currentUser.name,
+      email: currentUser.email,
+      phone: currentUser.phone,
+      gender: currentUser.gender,
       photo: _selectedPhoto,
     );
     provider.updateCurrentUser(updatedUser);
     setState(() => _isEditing = false);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Profile updated & saved to Database!')),
+      const SnackBar(content: Text('Profile picture updated & saved!')),
     );
   }
 
@@ -148,7 +142,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ? Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Edit Profile Details', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 16)),
+                        Text('Change Profile Picture', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 16)),
                         const SizedBox(height: 14),
 
                         // Profile Image Selector Header
@@ -157,10 +151,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             children: [
                               UserAvatar(
                                 photoUrl: _selectedPhoto,
-                                name: _nameController.text,
-                                radius: 45,
+                                name: user.name,
+                                radius: 50,
                               ),
-                              const SizedBox(height: 10),
+                              const SizedBox(height: 12),
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
@@ -183,82 +177,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 8),
-                              Text('Or select an avatar preset:', style: TextStyle(color: textSecondary, fontSize: 11)),
-                              const SizedBox(height: 8),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: _avatarPresets.map((presetUrl) {
-                                  final isSelected = _selectedPhoto == presetUrl;
-                                  return GestureDetector(
-                                    onTap: () => setState(() => _selectedPhoto = presetUrl),
-                                    child: Container(
-                                      margin: const EdgeInsets.symmetric(horizontal: 4),
-                                      padding: const EdgeInsets.all(2),
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        border: Border.all(
-                                          color: isSelected ? primary : Colors.transparent,
-                                          width: 2,
-                                        ),
-                                      ),
-                                      child: UserAvatar(
-                                        photoUrl: presetUrl,
-                                        name: 'Avatar',
-                                        radius: 18,
-                                      ),
-                                    ),
-                                  );
-                                }).toList(),
-                              ),
                             ],
                           ),
                         ),
-                        const SizedBox(height: 16),
-
-                        TextField(
-                          controller: _nameController,
-                          decoration: InputDecoration(
-                            labelText: 'Full Name',
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        TextField(
-                          controller: _phoneController,
-                          keyboardType: TextInputType.phone,
-                          decoration: InputDecoration(
-                            labelText: 'Phone Number',
-                            prefixText: '+91 ',
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        TextField(
-                          controller: _emailController,
-                          keyboardType: TextInputType.emailAddress,
-                          decoration: InputDecoration(
-                            labelText: 'Email Address',
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: ['Male', 'Female', 'Other'].map((g) {
-                            return Expanded(
-                              child: Padding(
-                                padding: const EdgeInsets.only(right: 6),
-                                child: ChoiceChip(
-                                  label: Center(child: Text(g, style: const TextStyle(fontSize: 12))),
-                                  selected: _selectedGender == g,
-                                  selectedColor: primary,
-                                  onSelected: (sel) => setState(() => _selectedGender = g),
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 20),
                         Row(
                           children: [
                             Expanded(
@@ -272,7 +194,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               child: ElevatedButton(
                                 style: ElevatedButton.styleFrom(backgroundColor: primary),
                                 onPressed: _saveProfile,
-                                child: const Text('Save Changes'),
+                                child: const Text('Save Photo'),
                               ),
                             ),
                           ],
@@ -317,7 +239,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               });
                             },
                             icon: const Icon(Icons.edit, size: 16),
-                            label: const Text('Change Profile & Image'),
+                            label: const Text('Change Profile Picture'),
                           ),
                         ),
                       ],
@@ -345,7 +267,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Container(
                     padding: const EdgeInsets.all(14),
@@ -363,74 +285,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: cardBg,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: border),
-                    ),
-                    child: const Column(
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text('4.9 ', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 20)),
-                            Icon(Icons.star, color: Colors.amber, size: 18),
-                          ],
-                        ),
-                        SizedBox(height: 2),
-                        Text('User Rating', style: TextStyle(color: Colors.grey, fontSize: 12)),
-                      ],
-                    ),
-                  ),
-                ),
               ],
             ),
             const SizedBox(height: 24),
-
-            // Support & Legal Section
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'SUPPORT & LEGAL',
-                style: TextStyle(color: textSecondary, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.8),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              decoration: BoxDecoration(
-                color: cardBg,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: border),
-              ),
-              child: Column(
-                children: [
-                  ListTile(
-                    leading: Icon(Icons.help_outline, color: primary),
-                    title: const Text('Help & Feedback', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                    subtitle: const Text('Contact support team or report bugs', style: TextStyle(fontSize: 12)),
-                    trailing: Icon(Icons.chevron_right, color: textSecondary),
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Support team: support@autoshare.com')),
-                      );
-                    },
-                  ),
-                  Divider(height: 1, color: border),
-                  ListTile(
-                    leading: Icon(Icons.description_outlined, color: primary),
-                    title: const Text('Terms of Service', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                    subtitle: const Text('Read AutoShare ride sharing terms', style: TextStyle(fontSize: 12)),
-                    trailing: Icon(Icons.chevron_right, color: textSecondary),
-                    onTap: () {},
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
 
             // Log Out Button
             SizedBox(

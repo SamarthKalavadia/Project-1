@@ -5,10 +5,11 @@ import '../models/ride_request.dart';
 import '../models/filters.dart';
 import '../services/storage_service.dart';
 import '../services/firebase_service.dart';
+import '../services/textbee_service.dart';
 
 final defaultUser = User(
   name: "Test Rider",
-  photo: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150",
+  photo: "",
   phone: "9912345678",
   email: "testrider_9912345678@autoshare.com",
   gender: "Male",
@@ -251,6 +252,14 @@ class RidesProvider extends ChangeNotifier {
     try {
       await FirebaseService.saveRideToFirestore(updatedRide);
     } catch (_) {}
+
+    // Send real-time SMS to poster via TextBee
+    TextBeeService.sendRideRequestNotification(
+      posterPhone: ride.poster.phone,
+      requesterName: _currentUser!.name,
+      pickup: ride.pickup,
+      destination: ride.destination,
+    );
   }
 
   Future<void> acceptRequest(String rideId, String requestId) async {
@@ -293,6 +302,15 @@ class RidesProvider extends ChangeNotifier {
     try {
       await FirebaseService.saveRideToFirestore(updatedRide);
     } catch (_) {}
+
+    // Send real-time SMS to accepted passenger via TextBee
+    TextBeeService.sendRideAcceptedNotification(
+      passengerPhone: acceptedUser.phone,
+      posterName: ride.poster.name,
+      posterPhone: ride.poster.phone,
+      pickup: ride.pickup,
+      destination: ride.destination,
+    );
   }
 
   Future<void> declineRequest(String rideId, String requestId) async {
