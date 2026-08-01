@@ -115,28 +115,53 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      // Direct Sign In with Email & Password
-      User? signedInUser = await FirebaseService.signInUser(
+      // Check if user exists in Firestore
+      var existingUser = await FirebaseService.getUserByEmailFromFirestore(email);
+      if (existingUser == null && _phoneController.text.isNotEmpty) {
+        existingUser = await FirebaseService.getUserFromFirestore(_phoneController.text.trim());
+      }
+
+      final cleanPhone = _phoneController.text.trim().isNotEmpty
+          ? _phoneController.text.trim()
+          : (existingUser?.phone.isNotEmpty == true ? existingUser!.phone : '9999999999');
+
+      _pendingUser = existingUser ??
+          User(
+            name: email.split('@').first,
+            photo: _photo,
+            phone: cleanPhone,
+            email: email.toLowerCase(),
+            gender: _gender,
+          );
+
+      // Check if email is already verified or needs verification
+      final alreadyVerified = await FirebaseService.sendFirebaseEmailVerification(
         email: email,
         password: password,
       );
 
-      if (signedInUser != null) {
-        if (mounted) {
-          context.read<RidesProvider>().login(signedInUser);
-        }
-        return;
-      }
-    } catch (e) {
-      // Fallback: Check if user exists in Firestore
-      final existingUser = await FirebaseService.getUserByEmailFromFirestore(email);
-      if (existingUser != null) {
-        if (mounted) {
-          context.read<RidesProvider>().login(existingUser);
-        }
+      if (alreadyVerified) {
+        // Email is ALREADY verified -> Directly navigate to Home screen
+        _completeLogin();
         return;
       }
 
+      // Email is NOT verified -> Show "Verify Email" screen & start 2s auto-checking timer
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _step = 'verify_email';
+        });
+        _startVerificationTimer();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Verification link sent to $email! Please verify your email to continue.'),
+            backgroundColor: Colors.green.shade700,
+          ),
+        );
+      }
+    } catch (e) {
       final cleanErr = e.toString().replaceAll('Exception: ', '').replaceAll('FirebaseAuthException: ', '');
       if (mounted) {
         setState(() {
