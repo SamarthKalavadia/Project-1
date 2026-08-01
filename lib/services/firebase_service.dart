@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter/foundation.dart';
 import '../models/user.dart';
 import '../models/ride.dart';
 
@@ -12,6 +14,87 @@ class FirebaseService {
 
   /// Get current Firebase Auth user
   static fb_auth.User? get currentFbUser => _auth.currentUser;
+
+  /// Sign in with Google Credential via Firebase Auth
+  static Future<User?> signInWithGoogle() async {
+    try {
+      final GoogleSignIn googleSignIn = GoogleSignIn();
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+      if (googleUser == null) return null; // User cancelled flow
+
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final fb_auth.AuthCredential credential = fb_auth.GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      final fb_auth.UserCredential userCredential = await _auth.signInWithCredential(credential);
+      final fb_auth.User? fbUser = userCredential.user;
+
+      if (fbUser != null) {
+        final String email = fbUser.email ?? '${googleUser.id}@gmail.com';
+        final String name = fbUser.displayName ?? googleUser.displayName ?? 'Google User';
+        final String photo = fbUser.photoURL ?? googleUser.photoUrl ?? '';
+
+        User? existingUser = await getUserByEmailFromFirestore(email);
+        if (existingUser != null) {
+          return existingUser;
+        }
+
+        final newUser = User(
+          name: name,
+          photo: photo,
+          phone: fbUser.phoneNumber?.replaceAll(RegExp(r'\D'), '') ?? '',
+          email: email.toLowerCase(),
+          gender: 'Male',
+        );
+
+        await saveUserToFirestore(newUser);
+        return newUser;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Google Sign In Error: $e');
+      rethrow;
+    }
+  }
+
+  /// Direct Sign In with Email & Password (no repeat verification prompt)
+  static Future<User?> signInUser({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final credential = await _auth.signInWithEmailAndPassword(
+        email: email.trim(),
+        password: password.trim(),
+      );
+      if (credential.user != null) {
+        User? existingUser = await getUserByEmailFromFirestore(email.trim());
+        if (existingUser != null) {
+          return existingUser;
+        }
+        return User(
+          name: email.split('@').first,
+          photo: '',
+          phone: '',
+          email: email.toLowerCase(),
+          gender: 'Male',
+        );
+      }
+      return null;
+    } on fb_auth.FirebaseAuthException catch (e) {
+      if (e.code == 'user-not-found') {
+        throw Exception('No account found with this email address. Please register first.');
+      } else if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
+        throw Exception('Incorrect password. Please check your password or tap Forgot Password.');
+      } else if (e.code == 'invalid-email') {
+        throw Exception('Please enter a valid email address.');
+      } else {
+        rethrow;
+      }
+    }
+  }
 
   /// Send Email Verification via Firebase Auth
   static Future<bool> sendFirebaseEmailVerification({

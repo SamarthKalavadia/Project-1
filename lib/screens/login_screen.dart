@@ -39,9 +39,13 @@ class _LoginScreenState extends State<LoginScreen> {
   void initState() {
     super.initState();
     _emailController = TextEditingController();
-    _passwordController = TextEditingController(text: '123456'); // Default password for simple UX
+    _passwordController = TextEditingController();
     _phoneController = TextEditingController();
     _nameController = TextEditingController();
+
+    _passwordController.addListener(() {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
@@ -56,7 +60,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _startVerificationTimer() {
     _verificationTimer?.cancel();
-    _verificationTimer = Timer.periodic(const Duration(seconds: 3), (timer) async {
+    _verificationTimer = Timer.periodic(const Duration(seconds: 2), (timer) async {
       final isVerified = await FirebaseService.isEmailVerified();
       if (isVerified) {
         timer.cancel();
@@ -111,51 +115,28 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      // Check if user exists in Firestore
-      var existingUser = await FirebaseService.getUserByEmailFromFirestore(email);
-      if (existingUser == null && _phoneController.text.isNotEmpty) {
-        existingUser = await FirebaseService.getUserFromFirestore(_phoneController.text.trim());
-      }
-
-      final cleanPhone = _phoneController.text.trim().isNotEmpty
-          ? _phoneController.text.trim()
-          : (existingUser?.phone.isNotEmpty == true ? existingUser!.phone : '9999999999');
-
-      _pendingUser = existingUser ??
-          User(
-            name: email.split('@').first,
-            photo: _photo,
-            phone: cleanPhone,
-            email: email.toLowerCase(),
-            gender: _gender,
-          );
-
-      // Send Firebase Email Verification Link
-      final alreadyVerified = await FirebaseService.sendFirebaseEmailVerification(
+      // Direct Sign In with Email & Password
+      User? signedInUser = await FirebaseService.signInUser(
         email: email,
         password: password,
       );
 
-      if (alreadyVerified) {
-        _completeLogin();
+      if (signedInUser != null) {
+        if (mounted) {
+          context.read<RidesProvider>().login(signedInUser);
+        }
+        return;
+      }
+    } catch (e) {
+      // Fallback: Check if user exists in Firestore
+      final existingUser = await FirebaseService.getUserByEmailFromFirestore(email);
+      if (existingUser != null) {
+        if (mounted) {
+          context.read<RidesProvider>().login(existingUser);
+        }
         return;
       }
 
-      if (mounted) {
-        setState(() {
-          _loading = false;
-          _step = 'verify_email';
-        });
-        _startVerificationTimer();
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Verification link sent to $email via Firebase Email!'),
-            backgroundColor: Colors.green.shade700,
-          ),
-        );
-      }
-    } catch (e) {
       final cleanErr = e.toString().replaceAll('Exception: ', '').replaceAll('FirebaseAuthException: ', '');
       if (mounted) {
         setState(() {
@@ -258,25 +239,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _checkEmailVerificationManual() async {
-    setState(() => _loading = true);
-    final isVerified = await FirebaseService.isEmailVerified();
-    setState(() => _loading = false);
-
-    if (isVerified) {
-      _completeLogin();
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Email not verified yet! Please click the link sent to your email inbox.'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-      }
-    }
-  }
-
   void _resendEmail() async {
     try {
       await FirebaseService.resendVerificationEmail();
@@ -333,6 +295,171 @@ class _LoginScreenState extends State<LoginScreen> {
         });
       }
     }
+  }
+
+  void _handleGoogleSignIn() async {
+    setState(() {
+      _errorMsg = '';
+      _loading = true;
+    });
+
+    try {
+      final user = await FirebaseService.signInWithGoogle();
+      if (user != null) {
+        if (mounted) {
+          context.read<RidesProvider>().login(user);
+        }
+      } else {
+        setState(() => _loading = false);
+      }
+    } catch (e) {
+      final cleanErr = e.toString().replaceAll('Exception: ', '').replaceAll('FirebaseAuthException: ', '');
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _errorMsg = 'Google Sign-In: $cleanErr';
+        });
+      }
+    }
+  }
+
+  Widget _buildPasswordStrengthIndicator(String password, BuildContext context) {
+    if (password.isEmpty) return const SizedBox.shrink();
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    Color color;
+    String text;
+    double progress;
+    String tip;
+
+    if (password.length < 6) {
+      color = Colors.red;
+      text = 'Weak';
+      progress = 0.33;
+      tip = 'Password must be at least 6 characters.';
+    } else {
+      bool hasUppercase = password.contains(RegExp(r'[A-Z]'));
+      bool hasDigits = password.contains(RegExp(r'[0-9]'));
+      bool hasSpecial = password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'));
+
+      if (password.length >= 8 && hasUppercase && (hasDigits || hasSpecial)) {
+        color = Colors.green;
+        text = 'Strong';
+        progress = 1.0;
+        tip = 'Great! Your password is secure.';
+      } else if (hasDigits || hasUppercase || hasSpecial) {
+        color = Colors.orange;
+        text = 'Medium';
+        progress = 0.66;
+        tip = 'Include uppercase letters, numbers & special symbols.';
+      } else {
+        color = Colors.red;
+        text = 'Weak';
+        progress = 0.33;
+        tip = 'Must include numbers or uppercase letters.';
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Password Strength:', style: TextStyle(color: isDark ? Colors.grey.shade400 : Colors.grey.shade700, fontSize: 12, fontWeight: FontWeight.w600)),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: color.withOpacity(0.3)),
+              ),
+              child: Text(
+                text,
+                style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 11),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: progress,
+            backgroundColor: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+            color: color,
+            minHeight: 5,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          tip,
+          style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w500),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGoogleSignInButton({required String label}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final border = isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1);
+
+    return Column(
+      children: [
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(child: Divider(color: border, height: 1)),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Text(
+                'OR',
+                style: TextStyle(color: Colors.grey.shade500, fontSize: 12, fontWeight: FontWeight.bold),
+              ),
+            ),
+            Expanded(child: Divider(color: border, height: 1)),
+          ],
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          width: double.infinity,
+          height: 48,
+          child: OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              backgroundColor: cardBg,
+              side: BorderSide(color: border),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: _loading ? null : _handleGoogleSignIn,
+            icon: Container(
+              width: 24,
+              height: 24,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white,
+              ),
+              child: const Center(
+                child: Text(
+                  'G',
+                  style: TextStyle(
+                    color: Color(0xFF4285F4),
+                    fontWeight: FontWeight.w900,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ),
+            label: Text(
+              label,
+              style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 14),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   void _completeLogin() async {
@@ -406,6 +533,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               onTap: () => setState(() {
                                 _mode = 'login';
                                 _errorMsg = '';
+                                _passwordController.clear();
                               }),
                               child: AnimatedContainer(
                                 duration: const Duration(milliseconds: 200),
@@ -432,6 +560,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               onTap: () => setState(() {
                                 _mode = 'register';
                                 _errorMsg = '';
+                                _passwordController.clear();
                               }),
                               child: AnimatedContainer(
                                 duration: const Duration(milliseconds: 200),
@@ -585,6 +714,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                       ),
                               ),
                             ),
+                            _buildGoogleSignInButton(label: 'Sign In with Google'),
                           ] else ...[
                             Text('Create New Account', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 18)),
                             const SizedBox(height: 4),
@@ -784,6 +914,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                       ),
                               ),
                             ),
+                            _buildGoogleSignInButton(label: 'Register with Google'),
                           ],
                         ],
 
@@ -846,36 +977,14 @@ class _LoginScreenState extends State<LoginScreen> {
                                       ),
                                       const SizedBox(height: 8),
                                       Text(
-                                        'Please open your email inbox, click the verification link, then tap the button below or wait a moment to be redirected automatically.',
+                                        'Please open your email inbox and click the verification link. You will be automatically redirected to the Home screen as soon as your email is verified.',
                                         style: TextStyle(color: textSecondary, fontSize: 12, height: 1.4),
                                         textAlign: TextAlign.center,
                                       ),
                                     ],
                                   ),
                                 ),
-                                const SizedBox(height: 20),
-
-                                SizedBox(
-                                  width: double.infinity,
-                                  height: 50,
-                                  child: ElevatedButton.icon(
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: primary,
-                                      foregroundColor: Colors.white,
-                                      elevation: 2,
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                    ),
-                                    onPressed: _loading ? null : _checkEmailVerificationManual,
-                                    icon: _loading
-                                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                                        : const Icon(Icons.verified_user),
-                                    label: const Text(
-                                      'I Have Verified My Email',
-                                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
+                                const SizedBox(height: 16),
 
                                 Row(
                                   children: [
@@ -955,7 +1064,8 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ),
                           ),
-                          const SizedBox(height: 16),
+                          _buildPasswordStrengthIndicator(_passwordController.text, context),
+                          const SizedBox(height: 14),
 
                           SizedBox(
                             width: double.infinity,
