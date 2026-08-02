@@ -414,33 +414,47 @@ class _RideCardState extends State<RideCard> {
                   ],
                 ),
               ] else ...[
-                SizedBox(
-                  width: double.infinity,
-                  height: 44,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: primary,
-                      foregroundColor: Colors.white,
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                (() {
+                  final isMale = currentUser?.gender.toLowerCase() == 'male';
+                  final isFemale = currentUser?.gender.toLowerCase() == 'female';
+                  final isGirlsOnly = ride.genderPreference == 'Girls only';
+                  final isBoysOnly = ride.genderPreference == 'Boys only';
+                  final isGenderIneligible = (isGirlsOnly && isMale) || (isBoysOnly && isFemale);
+
+                  return SizedBox(
+                    width: double.infinity,
+                    height: 44,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isGenderIneligible ? Colors.grey.shade400 : primary,
+                        foregroundColor: Colors.white,
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: (ride.seatsLeft <= 0 || ride.status != 'Pending' || isGenderIneligible)
+                          ? null
+                          : () {
+                              if (currentUser != null) {
+                                provider.requestToJoin(ride.id);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Ride request sent to host!')),
+                                );
+                              }
+                            },
+                      icon: Icon(isGenderIneligible ? Icons.block : Icons.hail, size: 18),
+                      label: Text(
+                        isGirlsOnly && isMale
+                            ? 'Girls Only Ride (Restricted)'
+                            : isBoysOnly && isFemale
+                                ? 'Boys Only Ride (Restricted)'
+                                : ride.seatsLeft <= 0
+                                    ? 'Full Seats'
+                                    : 'Request to Join Ride',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      ),
                     ),
-                    onPressed: ride.seatsLeft <= 0 || ride.status != 'Pending'
-                        ? null
-                        : () {
-                            if (currentUser != null) {
-                              provider.requestToJoin(ride.id);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Ride request sent to host!')),
-                              );
-                            }
-                          },
-                    icon: const Icon(Icons.hail, size: 18),
-                    label: Text(
-                      ride.seatsLeft <= 0 ? 'Full Seats' : 'Request to Join Ride',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                    ),
-                  ),
-                ),
+                  );
+                })(),
               ],
             ],
           ),

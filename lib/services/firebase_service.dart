@@ -100,56 +100,91 @@ class FirebaseService {
   static Future<bool> sendFirebaseEmailVerification({
     required String email,
     required String password,
+    bool isRegistering = false,
   }) async {
     fb_auth.User? currentUser = _auth.currentUser;
-    if (currentUser == null || currentUser.email?.toLowerCase() != email.toLowerCase()) {
+    final cleanEmail = email.trim();
+    final cleanPassword = password.trim();
+
+    if (currentUser == null || currentUser.email?.toLowerCase() != cleanEmail.toLowerCase()) {
       try {
-        final credential = await _auth.createUserWithEmailAndPassword(
-          email: email,
-          password: password,
-        );
-        currentUser = credential.user;
+        if (isRegistering) {
+          final credential = await _auth.createUserWithEmailAndPassword(
+            email: cleanEmail,
+            password: cleanPassword,
+          );
+          currentUser = credential.user;
+        } else {
+          final credential = await _auth.signInWithEmailAndPassword(
+            email: cleanEmail,
+            password: cleanPassword,
+          );
+          currentUser = credential.user;
+        }
       } on fb_auth.FirebaseAuthException catch (e) {
         if (e.code == 'email-already-in-use') {
           try {
             final credential = await _auth.signInWithEmailAndPassword(
-              email: email,
-              password: password,
+              email: cleanEmail,
+              password: cleanPassword,
             );
             currentUser = credential.user;
-          } catch (_) {
+          } on fb_auth.FirebaseAuthException catch (innerErr) {
+            if (innerErr.code == 'wrong-password' || innerErr.code == 'invalid-credential') {
+              throw Exception('Incorrect password. Please enter the correct password for $cleanEmail.');
+            }
             rethrow;
           }
+        } else if (e.code == 'user-not-found') {
+          throw Exception('No account found with $cleanEmail. Please switch to "Register" tab to create an account.');
+        } else if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
+          throw Exception('Incorrect password. Please check your password or tap Forgot Password.');
+        } else if (e.code == 'invalid-email') {
+          throw Exception('Please enter a valid email address.');
         } else if (e.code == 'operation-not-allowed') {
-          throw Exception('Email/Password provider is disabled in Firebase Console. Enable "Email/Password" under Auth -> Sign-in method tab.');
+          throw Exception('Email/Password authentication is disabled in Firebase Console.');
         } else {
           rethrow;
         }
-      } catch (e) {
-        rethrow;
       }
     }
 
     if (currentUser != null) {
-      try {
-        await currentUser.reload();
-        if (!currentUser.emailVerified) {
-          await currentUser.sendEmailVerification();
-          return false;
+      await currentUser.reload();
+      final freshUser = _auth.currentUser;
+      if (freshUser != null && !freshUser.emailVerified) {
+        try {
+          await freshUser.sendEmailVerification();
+        } catch (e) {
+          debugPrint('Notice when sending verification email: $e');
         }
-        return true;
-      } catch (_) {
         return false;
       }
+      return freshUser?.emailVerified ?? false;
     }
     return false;
   }
 
   /// Resend verification email
-  static Future<void> resendVerificationEmail() async {
-    final user = _auth.currentUser;
-    if (user != null && !user.emailVerified) {
-      await user.sendEmailVerification();
+  static Future<void> resendVerificationEmail({String? email, String? password}) async {
+    fb_auth.User? user = _auth.currentUser;
+    if (user == null && email != null && password != null) {
+      try {
+        final credential = await _auth.signInWithEmailAndPassword(
+          email: email.trim(),
+          password: password.trim(),
+        );
+        user = credential.user;
+      } catch (_) {}
+    }
+    if (user != null) {
+      await user.reload();
+      user = _auth.currentUser;
+      if (user != null && !user.emailVerified) {
+        await user.sendEmailVerification();
+      }
+    } else {
+      throw Exception('Unable to resend verification email. Please try logging in again.');
     }
   }
 

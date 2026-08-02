@@ -131,7 +131,16 @@ class RidesProvider extends ChangeNotifier {
 
   Future<void> _initSession() async {
     _currentUser = await StorageService.getUserSession();
-    _currentUser ??= defaultUser;
+    if (_currentUser != null) {
+      final fbUser = FirebaseService.currentFbUser;
+      if (fbUser != null) {
+        final isVerified = await FirebaseService.isEmailVerified();
+        if (!isVerified) {
+          _currentUser = null;
+          await StorageService.clearUserSession();
+        }
+      }
+    }
     _authLoading = false;
     notifyListeners();
   }
@@ -218,6 +227,17 @@ class RidesProvider extends ChangeNotifier {
     if (index == -1) return;
 
     final ride = _rides[index];
+
+    // Gender check safeguard
+    final isMale = _currentUser!.gender.toLowerCase() == 'male';
+    final isFemale = _currentUser!.gender.toLowerCase() == 'female';
+    if (ride.genderPreference == 'Girls only' && isMale) {
+      return;
+    }
+    if (ride.genderPreference == 'Boys only' && isFemale) {
+      return;
+    }
+
     final existingReqIndex = ride.requests.indexWhere((req) => req.user.email == _currentUser!.email);
     if (existingReqIndex != -1) return;
 

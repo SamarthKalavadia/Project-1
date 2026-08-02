@@ -232,6 +232,7 @@ class _LoginScreenState extends State<LoginScreen> {
       final alreadyVerified = await FirebaseService.sendFirebaseEmailVerification(
         email: email,
         password: password,
+        isRegistering: true,
       );
       if (alreadyVerified) {
         _completeLogin();
@@ -264,14 +265,41 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  void _checkVerificationManually() async {
+    setState(() => _loading = true);
+    final isVerified = await FirebaseService.isEmailVerified();
+    if (!mounted) return;
+    setState(() => _loading = false);
+
+    if (isVerified) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Email verified successfully! Welcome to AutoShare.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      _completeLogin();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Email not verified yet. Please click the link sent to your email inbox and try again.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    }
+  }
+
   void _resendEmail() async {
     try {
-      await FirebaseService.resendVerificationEmail();
+      await FirebaseService.resendVerificationEmail(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Verification email resent! Please check your inbox.'),
-            backgroundColor: Colors.green,
+          SnackBar(
+            content: Text('Verification email resent to ${_emailController.text.trim()}! Please check your inbox.'),
+            backgroundColor: Colors.green.shade700,
           ),
         );
       }
@@ -951,7 +979,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 Container(
                                   padding: const EdgeInsets.all(16),
                                   decoration: BoxDecoration(
-                                    color: Colors.amber.withOpacity(0.15),
+                                    color: Colors.amber.withValues(alpha: 0.15),
                                     shape: BoxShape.circle,
                                   ),
                                   child: const Icon(Icons.mark_email_unread_outlined, size: 52, color: Colors.amber),
@@ -1002,7 +1030,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                       ),
                                       const SizedBox(height: 8),
                                       Text(
-                                        'Please open your email inbox and click the verification link. You will be automatically redirected to the Home screen as soon as your email is verified.',
+                                        'Please open your email inbox and click the verification link. You will be automatically redirected as soon as your email is verified.',
                                         style: TextStyle(color: textSecondary, fontSize: 12, height: 1.4),
                                         textAlign: TextAlign.center,
                                       ),
@@ -1010,6 +1038,28 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: 16),
+
+                                SizedBox(
+                                  width: double.infinity,
+                                  height: 48,
+                                  child: ElevatedButton.icon(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: primary,
+                                      foregroundColor: Colors.white,
+                                      elevation: 2,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                    ),
+                                    onPressed: _loading ? null : _checkVerificationManually,
+                                    icon: _loading
+                                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                                        : const Icon(Icons.verified_user_outlined),
+                                    label: const Text(
+                                      "I've Verified — Continue to Login",
+                                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
 
                                 Row(
                                   children: [

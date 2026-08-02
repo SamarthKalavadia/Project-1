@@ -23,8 +23,28 @@ class HomeScreen extends StatelessWidget {
     final rides = provider.rides;
     final filters = provider.filters;
 
-    // Filter rides based on search criteria
+    final currentUser = provider.currentUser;
+
+    // Filter rides based on search criteria & strict gender preferences
     final filteredRides = rides.where((ride) {
+      final isOwner = currentUser != null && (currentUser.email == ride.poster.email || currentUser.phone == ride.poster.phone);
+
+      // 1. Strict Gender Ineligibility Filtering:
+      // Male users MUST NOT see "Girls only" rides (unless owner)
+      // Female users MUST NOT see "Boys only" rides (unless owner)
+      if (currentUser != null && !isOwner) {
+        final isMale = currentUser.gender.toLowerCase() == 'male';
+        final isFemale = currentUser.gender.toLowerCase() == 'female';
+
+        if (isMale && ride.genderPreference == 'Girls only') {
+          return false;
+        }
+        if (isFemale && ride.genderPreference == 'Boys only') {
+          return false;
+        }
+      }
+
+      // 2. Search location & filter criteria
       if (filters.pickup.isNotEmpty && !ride.pickup.toLowerCase().contains(filters.pickup.toLowerCase())) {
         return false;
       }

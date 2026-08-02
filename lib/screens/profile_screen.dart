@@ -185,16 +185,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           children: [
                             Expanded(
                               child: OutlinedButton(
+                                style: OutlinedButton.styleFrom(
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
                                 onPressed: () => setState(() => _isEditing = false),
-                                child: const Text('Cancel'),
+                                child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.bold)),
                               ),
                             ),
                             const SizedBox(width: 10),
                             Expanded(
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(backgroundColor: primary),
+                              child: ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: primary,
+                                  foregroundColor: Colors.white,
+                                  elevation: 2,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
                                 onPressed: _saveProfile,
-                                child: const Text('Save Photo'),
+                                icon: const Icon(Icons.check, size: 16),
+                                label: const Text(
+                                  'Save Photo',
+                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                                ),
                               ),
                             ),
                           ],
