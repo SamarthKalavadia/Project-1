@@ -4,6 +4,7 @@ import '../models/ride.dart';
 import '../providers/rides_provider.dart';
 import '../theme/app_theme.dart';
 import 'contact_reveal_button.dart';
+import 'live_location_tracker_modal.dart';
 import 'user_avatar.dart';
 
 class RideCard extends StatefulWidget {
@@ -243,16 +244,50 @@ class _RideCardState extends State<RideCard> {
                     'Est. Fare: ${ride.fareEstimate}',
                     style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 13),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: primary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      'Pref: ${ride.genderPreference}',
-                      style: TextStyle(color: primary, fontSize: 11, fontWeight: FontWeight.bold),
-                    ),
+                  Row(
+                    children: [
+                      InkWell(
+                        onTap: () {
+                          showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            backgroundColor: Colors.transparent,
+                            builder: (_) => LiveLocationTrackerModal(ride: ride),
+                          );
+                        },
+                        borderRadius: BorderRadius.circular(6),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.gps_fixed, size: 12, color: Colors.green),
+                              SizedBox(width: 4),
+                              Text(
+                                'Track GPS',
+                                style: TextStyle(color: Colors.green, fontSize: 11, fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          'Pref: ${ride.genderPreference}',
+                          style: TextStyle(color: primary, fontSize: 11, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
