@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/rides_provider.dart';
-import '../services/location_service.dart';
 import '../theme/app_theme.dart';
 
 class PostRideModal extends StatefulWidget {
@@ -19,32 +18,6 @@ class _PostRideModalState extends State<PostRideModal> {
   final _notesController = TextEditingController();
   int _seatsTotal = 3;
   String _genderPreference = 'Both';
-  bool _fetchingLocation = false;
-
-  Future<void> _useLiveLocation(TextEditingController controller) async {
-    setState(() => _fetchingLocation = true);
-    final locationData = await LocationService.getCurrentLocationWithAddress();
-    if (!mounted) return;
-    setState(() => _fetchingLocation = false);
-
-    if (locationData != null && locationData['address'] != null) {
-      controller.text = locationData['address'];
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Live GPS Location set: ${locationData['address']}'),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 3),
-        ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Unable to fetch live GPS location. Please check location permissions.'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-    }
-  }
 
   @override
   void dispose() {
@@ -126,13 +99,6 @@ class _PostRideModalState extends State<PostRideModal> {
                 labelText: 'Pickup Location *',
                 labelStyle: TextStyle(color: textSecondary, fontWeight: FontWeight.w500),
                 prefixIcon: Icon(Icons.my_location, color: primary),
-                suffixIcon: IconButton(
-                  icon: _fetchingLocation
-                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                      : Icon(Icons.gps_fixed, color: primary),
-                  tooltip: 'Use Live GPS Location',
-                  onPressed: () => _useLiveLocation(_pickupController),
-                ),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -156,13 +122,6 @@ class _PostRideModalState extends State<PostRideModal> {
                 labelText: 'Destination Location *',
                 labelStyle: TextStyle(color: textSecondary, fontWeight: FontWeight.w500),
                 prefixIcon: Icon(Icons.location_on, color: primary),
-                suffixIcon: IconButton(
-                  icon: _fetchingLocation
-                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                      : Icon(Icons.gps_fixed, color: primary),
-                  tooltip: 'Use Live GPS Location',
-                  onPressed: () => _useLiveLocation(_destinationController),
-                ),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
